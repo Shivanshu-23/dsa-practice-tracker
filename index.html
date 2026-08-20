@@ -70,6 +70,8 @@ h1{font-family:var(--font-display);font-size:31px;font-weight:700;letter-spacing
   color:var(--ink);margin:0 0 7px}
 .sub{color:var(--ink2);font-size:15px;max-width:68ch;margin:0}
 .sub em{color:var(--ink);font-style:normal;font-weight:600}
+.motiv{color:var(--ink2);font-size:13px;max-width:60ch;margin:11px 0 0;padding-left:11px;
+  border-left:2px solid var(--accent)}
 .byline{color:var(--accent);font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;
   text-transform:uppercase;font-weight:600;margin-bottom:13px}
 
@@ -133,6 +135,12 @@ button.g:hover{border-color:var(--ink3)}
 .prem{font-family:var(--font-mono);font-size:9.5px;font-weight:700;color:var(--ink3);
   border:1px solid var(--line);padding:1px 5px;border-radius:4px;flex-shrink:0}
 
+.rev{appearance:none;border:none;background:transparent;color:var(--ink3);cursor:pointer;
+  font-size:15px;line-height:1;padding:2px;margin:-2px;flex-shrink:0;border-radius:4px;
+  transition:color var(--dur-micro) var(--ease-out)}
+.rev:hover{color:var(--ink)}
+.rev.on{color:var(--accent)}
+
 .cfrow{margin-top:11px;padding-top:11px;border-top:1px solid var(--line2);
   font-size:13px;color:var(--ink2);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 .cfrow a{color:var(--ink);font-weight:600;text-decoration:none;
@@ -182,6 +190,7 @@ footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);
   <p class="sub">Every pattern ID from <em>The Complete Pattern Book</em>, mapped to problems you can click
   straight through to. Read the pattern card first, then work its list easy&nbsp;&rarr;&nbsp;hard.
   Tick as you go.</p>
+  <p class="motiv">Shivanshu — the product-based offer isn't luck, it's this list, cleared row by row.</p>
 </header>
 
 <div class="bar"><div class="bar-in">
@@ -194,6 +203,7 @@ footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);
   <button class="f" data-f="Medium">Medium</button>
   <button class="f" data-f="Hard">Hard</button>
   <button class="f" data-f="todo">Unsolved</button>
+  <button class="f" data-f="revision">Revision</button>
   <button class="g" id="exp">Expand all</button>
 </div></div>
 
@@ -228,6 +238,10 @@ const STORE_KEY = 'dsa-tracker-state';
 const state = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
 function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
+const REV_KEY = 'dsa-tracker-revision';
+const revState = JSON.parse(localStorage.getItem(REV_KEY) || '{}');
+function saveRev(){ localStorage.setItem(REV_KEY, JSON.stringify(revState)); }
+
 function render(){
   const L = document.getElementById('list');
   L.innerHTML = '';
@@ -240,6 +254,7 @@ function render(){
     const visible = row.probs.filter((p, pi) => {
       if(filter === 'all') return true;
       if(filter === 'todo') return !state[ri+'-'+pi];
+      if(filter === 'revision') return !!revState[ri+'-'+pi];
       return p.d === filter;
     });
     if(visible.length === 0 && row.probs.length > 0) return;
@@ -261,15 +276,21 @@ function render(){
       row.probs.forEach((p, pi) => {
         const key = ri+'-'+pi;
         if(filter === 'todo' && state[key]) return;
-        if(filter !== 'all' && filter !== 'todo' && p.d !== filter) return;
+        if(filter === 'revision' && !revState[key]) return;
+        if(filter !== 'all' && filter !== 'todo' && filter !== 'revision' && p.d !== filter) return;
         const d = document.createElement('div');
         d.className = 'p' + (state[key] ? ' done' : '');
         d.innerHTML = '<input type="checkbox"' + (state[key] ? ' checked' : '') + '>'
           + '<a href="' + p.u + '" target="_blank" rel="noopener">' + p.t + '</a>'
           + (p.p ? '<span class="prem">PREMIUM</span>' : '')
-          + '<span class="d ' + p.d + '">' + p.d + '</span>';
+          + '<span class="d ' + p.d + '">' + p.d + '</span>'
+          + '<button class="rev' + (revState[key] ? ' on' : '') + '" type="button" title="Flag for revision" aria-pressed="' + (!!revState[key]) + '">'
+          + (revState[key] ? '&#9733;' : '&#9734;') + '</button>';
         d.querySelector('input').addEventListener('change', e => {
           state[key] = e.target.checked; saveState(); render(); updateProgress();
+        });
+        d.querySelector('.rev').addEventListener('click', () => {
+          revState[key] = !revState[key]; saveRev(); render();
         });
         ul.appendChild(d);
       });
